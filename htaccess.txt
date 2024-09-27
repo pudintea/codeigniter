@@ -1,0 +1,11 @@
+# mencegah aksess ke folder yang tidak ada file index.html
+Options -Indexes
+Options All -Indexes
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php/$1 [L]
+
+
+SELESAI.
