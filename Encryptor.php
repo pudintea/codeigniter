@@ -16,7 +16,7 @@ class Encryptor {
         $this->key = hash('sha256', $this->key, true);
     }
     /**
-     * Agar lebih rapi, tambahkan fungsi generateRandomKey() untuk membuat kode_decrypt_nik unik
+     * Agar lebih rapi, tambahkan fungsi generateRandomKey() untuk membuat kode_decrypt unik
      */
     public function generateRandomKey($length = 16) {
         return bin2hex(random_bytes($length / 2)); // Menghasilkan key acak
