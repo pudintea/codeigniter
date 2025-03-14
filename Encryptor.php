@@ -73,3 +73,59 @@ class Test extends CI_Controller {
     }
 }
 **/
+
+/**
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nama_lengkap VARCHAR(255),
+    nik TEXT,
+    tanggal_lahir DATE,
+    tempat_lahir VARCHAR(255),
+    email VARCHAR(255),
+    kode_decrypt_nik VARCHAR(255)
+);
+
+// Untuk Enkripsi di setiap kali menyimpan nik di database
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class User_model extends CI_Model {
+    public function __construct() {
+        parent::__construct();
+        $this->load->library('encryptor', ['encryption_key' => 'my_secret_key']);
+    }
+
+    public function save_user($data) {
+        // Buat kode unik untuk decrypt
+        $kode_decrypt_nik = $this->encryptor->generateRandomKey(16);
+
+        // Enkripsi NIK sebelum disimpan
+        $encrypted_nik = $this->encryptor->encrypt($data['nik'], $kode_decrypt_nik);
+
+        // Simpan ke database
+        $insert_data = [
+            'nama_lengkap'     => $data['nama_lengkap'],
+            'nik'              => $encrypted_nik,
+            'tanggal_lahir'    => $data['tanggal_lahir'],
+            'tempat_lahir'     => $data['tempat_lahir'],
+            'email'            => $data['email'],
+            'kode_decrypt_nik' => $kode_decrypt_nik
+        ];
+
+        return $this->db->insert('users', $insert_data);
+    }
+
+    public function get_user($id) {
+        $this->db->where('id', $id);
+        $query = $this->db->get('users');
+        $user = $query->row_array();
+
+        if ($user) {
+            // Dekripsi NIK
+            $user['nik'] = $this->encryptor->decrypt($user['nik'], $user['kode_decrypt_nik']);
+        }
+        return $user;
+    }
+}
+
+**/
