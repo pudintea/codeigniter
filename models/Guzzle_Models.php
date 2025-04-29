@@ -9,16 +9,16 @@
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 
-class Employe_Models extends CI_Model
+class Guzzle_Models extends CI_Model
 {
-    private $_username;
+    	private $_username;
 	private $_password;
-    private $_biotime_url;
+   	private $_biotime_url;
 	function __construct(){
 		parent::__construct();
 			$this->_username = 'usernamexxx';
 			$this->_password = 'passwordxxx';
-      $this->_biotime_url = 'http://xxxxxxxxxxx';
+      			$this->_biotime_url = 'http://xxxxxxxxxxx';
 	}
 	
 	/**
