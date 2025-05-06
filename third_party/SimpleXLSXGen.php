@@ -1,5 +1,4 @@
-<?php defined('__PUDINTEA__') OR exit('No direct script access allowed');
-
+<?php 
 /** @noinspection UnknownInspectionInspection */
 /* PHP5.6 */
 /** @noinspection PowerOperatorCanBeUsedInspection */
@@ -16,6 +15,7 @@
 /** @noinspection AccessModifierPresentedInspection */
 
 namespace Shuchkin;
+defined('__PUDINTEA__') OR exit('No direct script access allowed');
 /**
  * Class SimpleXLSXGen
  * Export data to MS Excel. PHP XLSX generator
