@@ -75,6 +75,24 @@ class Pdn_crud extends CI_Model
     }
 
     /**
+     * RESULT WHERE ORDERBY
+     * $this->Pdn_crud->result_where_orderby($nama_tb, $nama_where, $where, $nama_orderby, $orderby)
+    **/
+
+    function result_where_orderby($nama_tb='', $nama_where='', $where='', $nama_orderby='', $orderby='ASC')
+    {
+        if(!empty($nama_tb) || !empty($nama_where) || !empty($where)){
+            $this->db->where($nama_where, $where);
+            $this->db->order_by($nama_orderby, $orderby);
+            $this->_result = $this->db->get($nama_tb)->result();
+
+            if ($this->_result) {
+                return $this->_result;
+            }
+        }
+    }
+
+    /**
      * RESULT ORDERBY
      * $this->Pdn_crud->result_orderby($nama_tb, $nama_orderby, $orderby)
      * ASC, DESC AND RANDOM. Default ASC
