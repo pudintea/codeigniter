@@ -5,6 +5,7 @@ defined('__PUDIN_SAEPUDIN__') OR exit('No direct script access allowed');
 |--------------------------------------------------------------------------
 | Base Site URL
 |--------------------------------------------------------------------------
+| <?=$this->config->item('nama_sekolah');?>
 |
 | URL to your CodeIgniter root. Typically this will be your base URL,
 | WITH a trailing slash:
