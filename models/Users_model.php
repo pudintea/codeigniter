@@ -4,6 +4,8 @@ class Users_model extends CI_Model
 {
 	function __construct(){
 		parent::__construct();
+		$this->pudin_dev->pdn_is_login();
+		$this->pudin_dev->pdn_is_admin();
 	}
 
     /**
