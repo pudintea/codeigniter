@@ -1,0 +1,450 @@
+<?php
+/**
+ * HTTP METHOD SPOOFING DI CODEIGNITER 3
+ * Implementasi untuk mensimulasikan HTTP methods PUT, PATCH, DELETE
+ */
+
+// ==========================================
+// 1. CORE HOOKS - application/hooks/Http_method_spoofing.php
+// ==========================================
+class Http_method_spoofing {
+    
+    public function override_method() {
+        $CI =& get_instance();
+        
+        // Cek apakah ada _method di POST data
+        $method = $CI->input->post('_method');
+        
+        if ($method) {
+            $method = strtoupper($method);
+            
+            // Validasi method yang diizinkan
+            $allowed_methods = ['PUT', 'PATCH', 'DELETE', 'POST', 'GET'];
+            
+            if (in_array($method, $allowed_methods)) {
+                // Override $_SERVER['REQUEST_METHOD']
+                $_SERVER['REQUEST_METHOD'] = $method;
+                $_SERVER['ORIGINAL_REQUEST_METHOD'] = $_SERVER['REQUEST_METHOD'] ?? 'POST';
+            }
+        }
+        
+        // Cek header X-HTTP-Method-Override (untuk AJAX)
+        $header_method = $CI->input->get_request_header('X-HTTP-Method-Override', TRUE);
+        if ($header_method) {
+            $header_method = strtoupper($header_method);
+            $allowed_methods = ['PUT', 'PATCH', 'DELETE', 'POST', 'GET'];
+            
+            if (in_array($header_method, $allowed_methods)) {
+                $_SERVER['REQUEST_METHOD'] = $header_method;
+                $_SERVER['ORIGINAL_REQUEST_METHOD'] = $_SERVER['REQUEST_METHOD'] ?? 'POST';
+            }
+        }
+    }
+}
+
+// ==========================================
+// 2. HELPER FUNCTION - application/helpers/http_helper.php
+// ==========================================
+if (!function_exists('method_field')) {
+    /**
+     * Generate hidden input untuk method spoofing
+     */
+    function method_field($method) {
+        return '<input type="hidden" name="_method" value="' . strtoupper($method) . '">';
+    }
+}
+
+if (!function_exists('is_method')) {
+    /**
+     * Cek HTTP method saat ini
+     */
+    function is_method($method) {
+        return strtoupper($_SERVER['REQUEST_METHOD']) === strtoupper($method);
+    }
+}
+
+if (!function_exists('current_method')) {
+    /**
+     * Get current HTTP method
+     */
+    function current_method() {
+        return $_SERVER['REQUEST_METHOD'];
+    }
+}
+
+// ==========================================
+// 3. EXTENDED INPUT CLASS - application/core/MY_Input.php
+// ==========================================
+class MY_Input extends CI_Input {
+    
+    /**
+     * Get HTTP method
+     */
+    public function method($upper = TRUE) {
+        $method = $_SERVER['REQUEST_METHOD'];
+        return $upper ? strtoupper($method) : strtolower($method);
+    }
+    
+    /**
+     * Check if method is specific type
+     */
+    public function is_method($method) {
+        return $this->method() === strtoupper($method);
+    }
+    
+    /**
+     * Get original method before spoofing
+     */
+    public function original_method() {
+        return $_SERVER['ORIGINAL_REQUEST_METHOD'] ?? $_SERVER['REQUEST_METHOD'];
+    }
+    
+    /**
+     * Get PUT data
+     */
+    public function put($index = NULL, $xss_clean = NULL) {
+        return $this->_fetch_from_array($_POST, $index, $xss_clean);
+    }
+    
+    /**
+     * Get PATCH data
+     */
+    public function patch($index = NULL, $xss_clean = NULL) {
+        return $this->_fetch_from_array($_POST, $index, $xss_clean);
+    }
+    
+    /**
+     * Get DELETE data
+     */
+    public function delete($index = NULL, $xss_clean = NULL) {
+        return $this->_fetch_from_array($_POST, $index, $xss_clean);
+    }
+}
+
+// ==========================================
+// 4. CONTROLLER EXAMPLE - application/controllers/Users.php
+// ==========================================
+class Users extends CI_Controller {
+    
+    public function __construct() {
+        parent::__construct();
+        $this->load->helper(['url', 'form', 'http']);
+        $this->load->library('form_validation');
+    }
+    
+    /**
+     * GET /users - List all users
+     */
+    public function index() {
+        if (!$this->input->is_method('GET')) {
+            show_404();
+        }
+        
+        // Logic untuk menampilkan daftar users
+        $data['users'] = $this->user_model->get_all();
+        $this->load->view('users/index', $data);
+    }
+    
+    /**
+     * GET /users/create - Show create form
+     */
+    public function create() {
+        if (!$this->input->is_method('GET')) {
+            show_404();
+        }
+        
+        $this->load->view('users/create');
+    }
+    
+    /**
+     * POST /users - Store new user
+     */
+    public function store() {
+        if (!$this->input->is_method('POST')) {
+            show_404();
+        }
+        
+        $this->form_validation->set_rules('name', 'Name', 'required');
+        $this->form_validation->set_rules('email', 'Email', 'required|valid_email');
+        
+        if ($this->form_validation->run() === FALSE) {
+            $this->load->view('users/create');
+        } else {
+            $data = [
+                'name' => $this->input->post('name'),
+                'email' => $this->input->post('email')
+            ];
+            
+            $this->user_model->create($data);
+            redirect('users');
+        }
+    }
+    
+    /**
+     * GET /users/{id} - Show specific user
+     */
+    public function show($id) {
+        if (!$this->input->is_method('GET')) {
+            show_404();
+        }
+        
+        $data['user'] = $this->user_model->get($id);
+        $this->load->view('users/show', $data);
+    }
+    
+    /**
+     * GET /users/{id}/edit - Show edit form
+     */
+    public function edit($id) {
+        if (!$this->input->is_method('GET')) {
+            show_404();
+        }
+        
+        $data['user'] = $this->user_model->get($id);
+        $this->load->view('users/edit', $data);
+    }
+    
+    /**
+     * PUT /users/{id} - Update user
+     */
+    public function update($id) {
+        if (!$this->input->is_method('PUT')) {
+            show_404();
+        }
+        
+        $this->form_validation->set_rules('name', 'Name', 'required');
+        $this->form_validation->set_rules('email', 'Email', 'required|valid_email');
+        
+        if ($this->form_validation->run() === FALSE) {
+            $data['user'] = $this->user_model->get($id);
+            $this->load->view('users/edit', $data);
+        } else {
+            $data = [
+                'name' => $this->input->put('name'),
+                'email' => $this->input->put('email')
+            ];
+            
+            $this->user_model->update($id, $data);
+            redirect('users');
+        }
+    }
+    
+    /**
+     * DELETE /users/{id} - Delete user
+     */
+    public function destroy($id) {
+        if (!$this->input->is_method('DELETE')) {
+            show_404();
+        }
+        
+        $this->user_model->delete($id);
+        
+        // Untuk AJAX request
+        if ($this->input->is_ajax_request()) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['status' => 'success']));
+        } else {
+            redirect('users');
+        }
+    }
+    
+    /**
+     * Handle multiple methods in one function
+     */
+    public function user_action($id = null) {
+        switch ($this->input->method()) {
+            case 'GET':
+                if ($id) {
+                    return $this->show($id);
+                } else {
+                    return $this->index();
+                }
+                break;
+                
+            case 'POST':
+                return $this->store();
+                break;
+                
+            case 'PUT':
+                return $this->update($id);
+                break;
+                
+            case 'DELETE':
+                return $this->destroy($id);
+                break;
+                
+            default:
+                show_404();
+        }
+    }
+}
+
+// ==========================================
+// 5. VIEW EXAMPLES
+// ==========================================
+
+// users/create.php
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create User</title>
+</head>
+<body>
+    <h2>Create New User</h2>
+    
+    <?= form_open('users/store') ?>
+        <div>
+            <label>Name:</label>
+            <input type="text" name="name" value="<?= set_value('name') ?>">
+            <?= form_error('name') ?>
+        </div>
+        
+        <div>
+            <label>Email:</label>
+            <input type="email" name="email" value="<?= set_value('email') ?>">
+            <?= form_error('email') ?>
+        </div>
+        
+        <button type="submit">Create User</button>
+    <?= form_close() ?>
+</body>
+</html>
+
+<?php
+// users/edit.php
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit User</title>
+</head>
+<body>
+    <h2>Edit User</h2>
+    
+    <?= form_open('users/update/' . $user->id) ?>
+        <?= method_field('PUT') ?>
+        
+        <div>
+            <label>Name:</label>
+            <input type="text" name="name" value="<?= set_value('name', $user->name) ?>">
+            <?= form_error('name') ?>
+        </div>
+        
+        <div>
+            <label>Email:</label>
+            <input type="email" name="email" value="<?= set_value('email', $user->email) ?>">
+            <?= form_error('email') ?>
+        </div>
+        
+        <button type="submit">Update User</button>
+    <?= form_close() ?>
+</body>
+</html>
+
+<?php
+// users/index.php
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Users List</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h2>Users List</h2>
+    
+    <a href="<?= site_url('users/create') ?>">Add New User</a>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($users as $user): ?>
+            <tr>
+                <td><?= $user->id ?></td>
+                <td><?= $user->name ?></td>
+                <td><?= $user->email ?></td>
+                <td>
+                    <a href="<?= site_url('users/show/' . $user->id) ?>">View</a>
+                    <a href="<?= site_url('users/edit/' . $user->id) ?>">Edit</a>
+                    
+                    <!-- Delete dengan Form -->
+                    <?= form_open('users/destroy/' . $user->id, ['style' => 'display:inline']) ?>
+                        <?= method_field('DELETE') ?>
+                        <button type="submit" onclick="return confirm('Are you sure?')">Delete</button>
+                    <?= form_close() ?>
+                    
+                    <!-- Delete dengan AJAX -->
+                    <button onclick="deleteUser(<?= $user->id ?>)">Delete (AJAX)</button>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    
+    <script>
+    function deleteUser(id) {
+        if (confirm('Are you sure you want to delete this user?')) {
+            $.ajax({
+                url: '<?= site_url("users/destroy/") ?>' + id,
+                type: 'POST',
+                headers: {
+                    'X-HTTP-Method-Override': 'DELETE'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload();
+                    }
+                },
+                error: function() {
+                    alert('Error deleting user');
+                }
+            });
+        }
+    }
+    </script>
+</body>
+</html>
+
+<?php
+// ==========================================
+// 6. CONFIGURATION - application/config/hooks.php
+// ==========================================
+/*
+Tambahkan di config/hooks.php:
+
+$hook['pre_controller'] = array(
+    'class'    => 'Http_method_spoofing',
+    'function' => 'override_method',
+    'filename' => 'Http_method_spoofing.php',
+    'filepath' => 'hooks'
+);
+*/
+
+// ==========================================
+// 7. ROUTES EXAMPLE - application/config/routes.php
+// ==========================================
+/*
+Contoh routing RESTful:
+
+$route['users'] = 'users/index';              // GET
+$route['users/create'] = 'users/create';      // GET
+$route['users/store'] = 'users/store';        // POST
+$route['users/(:num)'] = 'users/show/$1';     // GET
+$route['users/(:num)/edit'] = 'users/edit/$1'; // GET
+$route['users/(:num)/update'] = 'users/update/$1'; // PUT
+$route['users/(:num)/destroy'] = 'users/destroy/$1'; // DELETE
+
+// Atau menggunakan satu route untuk semua method
+$route['api/users/(:num)'] = 'users/user_action/$1';
+$route['api/users'] = 'users/user_action';
+*/
+?>
